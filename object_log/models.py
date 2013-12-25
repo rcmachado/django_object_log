@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.template.loader import get_template
 from django.template import Context
-from django.utils import simplejson
+import json
 
 
 class LogActionManager(models.Manager):
@@ -27,7 +27,7 @@ class LogActionManager(models.Manager):
     def _register(self, key, template, build_cache=None):
         """
         Registers and caches an LogAction type
-        
+
         @param key : Key identifying log action
         @param template : template associated with key
         """
@@ -52,7 +52,7 @@ class LogActionManager(models.Manager):
         """
         Register all permissions that were delayed waiting for database tables to
         be created.
-        
+
         Don't call this from outside code.
         """
         try:
@@ -73,7 +73,7 @@ class LogActionManager(models.Manager):
         """
         Attempts to retrieve the LogAction from cache, if it fails, loads
         the action into the cache.
-        
+
         @param key : key passed to LogAction.objects.get
         """
         try:
@@ -96,14 +96,14 @@ class LogAction(models.Model):
 
     @param name           string  verb (for example: add)
     """
-    
+
     name = models.CharField(max_length=128, unique=True, primary_key=True)
     template = models.CharField(max_length=128)
     objects = LogActionManager()
-    
+
     def __str__(self):
         return 'LogAction: %s Template: %s \n'%(self.name, self.template)
-    
+
 
 class LogItemManager(models.Manager):
 
@@ -122,13 +122,13 @@ class LogItemManager(models.Manager):
         #key = smart_unicode(key)
         action = LogAction.objects.get_from_cache(key)
         entry = self.model(action=action, user=user, object1=object1)
-        
+
         if object2 is not None:
             entry.object2 = object2
-        
+
         if object3 is not None:
             entry.object3 = object3
-        
+
         # build cached data and or arbitrary data.
         if action.build_cache is not None:
             entry.data = action.build_cache(user, object1, object2, object3, data)
@@ -147,17 +147,17 @@ class LogItem(models.Model):
     #action = models.CharField(max_length=128)
     timestamp = models.DateTimeField(auto_now_add=True, )
     user = models.ForeignKey(User, related_name='log_items')
-    
+
     object_type1 = models.ForeignKey(ContentType, \
     related_name='log_items1', null=True)
     object_id1 = models.PositiveIntegerField(null=True)
     object1 = GenericForeignKey("object_type1", "object_id1")
-    
+
     object_type2 = models.ForeignKey(ContentType, \
     related_name='log_items2', null=True)
     object_id2 = models.PositiveIntegerField(null=True)
     object2 = GenericForeignKey("object_type2", "object_id2")
-    
+
     object_type3 = models.ForeignKey(ContentType, \
     related_name='log_items3', null=True)
     object_id3 = models.PositiveIntegerField(null=True)
@@ -174,7 +174,7 @@ class LogItem(models.Model):
     @property
     def data(self):
         if self._data is None and not self.serialized_data is None:
-            self._data = simplejson.loads(self.serialized_data)
+            self._data = json.loads(self.serialized_data)
         return self._data
 
     @data.setter
@@ -192,7 +192,7 @@ class LogItem(models.Model):
 
     def save(self, *args, **kwargs):
         if self._data is not None and self.serialized_data is None:
-            self.serialized_data = simplejson.dumps(self._data)
+            self.serialized_data = json.dumps(self._data)
         super(LogItem, self).save(*args, **kwargs)
 
     def render(self, **context):
@@ -208,10 +208,10 @@ class LogItem(models.Model):
 
     def __repr__(self):
         return 'time: %s user: %s object_type1: %s'%(self.timestamp, self.user, self.object_type1)
-    
+
     def __str__(self):
         """
-        Renders single line log entry to a string, 
+        Renders single line log entry to a string,
         containing information like:
         - date and extensive time
         - user who performed an action

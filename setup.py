@@ -5,7 +5,7 @@ from setuptools import setup
 long_desc = open('README.rst').read()
 
 setup(name='django-object-log',
-      version="0.7",
+      version="0.7uo",
       description='A method for logging user actions on models',
       long_description=long_desc,
       author='Peter Krenesky',
